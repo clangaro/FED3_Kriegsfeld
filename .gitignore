@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets
+.env
+.streamlit/secrets.toml
+
+# Downloaded Google Sheet workbooks (regenerated each run)
+data/outputs/fed3_multifeeder_*.xlsx
+
+# Generated PDFs
+data/outputs/*.pdf
+*_Actograms_*.pdf
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
