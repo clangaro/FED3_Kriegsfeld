@@ -153,8 +153,8 @@ def make_actogram(
     tab_name: str,
     selected_days,
     bin_minutes: int = 10,
-    light_start: float = 11.0,
-    dark_start: float = 23.0,
+    light_start: float = 7.0,
+    dark_start: float = 19.0,
 ):
     """Render an actogram figure for one mouse over the selected feeding days."""
     pellets = pellets[pellets["FeedingDay"].isin(selected_days)].copy()

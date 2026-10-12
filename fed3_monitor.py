@@ -24,8 +24,8 @@ RECEIVER_EMAIL = "carter_bower@berkeley.edu"       # Where the alert goes
 
 # --- ACTOGRAM CONFIGURATION ---
 BIN_MINUTES = 10        
-LIGHT_START = 9         
-DARK_START = 21         
+LIGHT_START = 7         
+DARK_START = 19         
 # ------------------------------
 
 def send_email_alert(subject, body):

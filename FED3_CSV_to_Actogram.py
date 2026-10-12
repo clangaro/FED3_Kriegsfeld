@@ -12,8 +12,8 @@ INPUT_FOLDER = "/Volumes/FED3/Analysis"
 ANIMAL_ID = "FED3 Test"                       # Used for the AWD header and plot title
 
 # Actogram Aesthetic Options
-LIGHT_START_HOUR = 11.0   # Hour lights turn ON (e.g., 10.0 = 10:00 AM)
-DARK_START_HOUR = 23.0    # Hour lights turn OFF (e.g., 22.0 = 10:00 PM)
+LIGHT_START_HOUR = 7.0    # Hour lights turn ON (e.g., 10.0 = 10:00 AM)
+DARK_START_HOUR = 19.0    # Hour lights turn OFF (e.g., 22.0 = 10:00 PM)
 LIGHT_COLOR = "lemonchiffon"
 DARK_COLOR = "lightgray"
 # ==============================================================================
