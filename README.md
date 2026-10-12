@@ -49,6 +49,9 @@ sheet**. The sheet must be shared as "Anyone with the link — Viewer".
 - **Pellet weight (mg)** — default 20; used to convert counts to grams.
 - **Warning threshold** — default 0.80 (warns if today ÷ yesterday < 80%).
 - **Actogram bin size** — default 10 minutes.
+- **Lights ON / Lights OFF hour** — default 7 (7am) and 19 (7pm), in
+  half-hour steps. Sets the light/dark shading on the actograms and PDF.
+  A reversed cycle (e.g., ON 19, OFF 7) is supported.
 
 ### Main view
 - **Feeding-day range picker** — filters actograms, the today/yesterday

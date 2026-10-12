@@ -185,9 +185,15 @@ def make_actogram(
 
     for i, (ax, d) in enumerate(zip(axes, unique_dates)):
         day_data = binned[binned["Date"] == d]
-        ax.axvspan(0, light_start, color="lightgray", alpha=0.35, lw=0)
-        ax.axvspan(light_start, dark_start, color="lemonchiffon", alpha=0.45, lw=0)
-        ax.axvspan(dark_start, 24, color="lightgray", alpha=0.35, lw=0)
+        if light_start < dark_start:
+            ax.axvspan(0, light_start, color="lightgray", alpha=0.35, lw=0)
+            ax.axvspan(light_start, dark_start, color="lemonchiffon", alpha=0.45, lw=0)
+            ax.axvspan(dark_start, 24, color="lightgray", alpha=0.35, lw=0)
+        else:
+            # Light phase wraps past midnight (e.g., reversed light cycle).
+            ax.axvspan(0, dark_start, color="lemonchiffon", alpha=0.45, lw=0)
+            ax.axvspan(dark_start, light_start, color="lightgray", alpha=0.35, lw=0)
+            ax.axvspan(light_start, 24, color="lemonchiffon", alpha=0.45, lw=0)
         ax.bar(
             day_data["Time_of_Day"],
             day_data["Event_Count"],
@@ -291,6 +297,25 @@ threshold = st.sidebar.slider(
 bin_minutes = st.sidebar.number_input(
     "Actogram bin size (min)", min_value=1, max_value=60, value=10
 )
+light_start = st.sidebar.number_input(
+    "Lights ON hour (0–23.5)",
+    min_value=0.0,
+    max_value=23.5,
+    value=7.0,
+    step=0.5,
+    help="Hour lights turn on, 24-hour clock. 7.0 = 7am, 7.5 = 7:30am.",
+)
+dark_start = st.sidebar.number_input(
+    "Lights OFF hour (0–23.5)",
+    min_value=0.0,
+    max_value=23.5,
+    value=19.0,
+    step=0.5,
+    help="Hour lights turn off, 24-hour clock. 19.0 = 7pm.",
+)
+if light_start == dark_start:
+    st.sidebar.error("Lights ON and OFF hours must differ.")
+    st.stop()
 
 # --- Main ---
 st.title("FED3 Actogram Dashboard")
@@ -331,7 +356,8 @@ with top_r:
     pdf_buf = io.BytesIO()
     with PdfPages(pdf_buf) as pdf:
         for tab_name, pellets in pellets_by_mouse.items():
-            fig = make_actogram(pellets, tab_name, selected_days, bin_minutes=int(bin_minutes))
+            fig = make_actogram(pellets, tab_name, selected_days, bin_minutes=int(bin_minutes),
+                                light_start=light_start, dark_start=dark_start)
             if fig is not None:
                 pdf.savefig(fig, bbox_inches="tight", facecolor="white")
                 plt.close(fig)
@@ -389,7 +415,8 @@ for tab, mouse_id in zip(tabs, mouse_ids):
             )
 
         # Actogram
-        fig = make_actogram(pellets, mouse_id, selected_days, bin_minutes=int(bin_minutes))
+        fig = make_actogram(pellets, mouse_id, selected_days, bin_minutes=int(bin_minutes),
+                            light_start=light_start, dark_start=dark_start)
         if fig is not None:
             st.pyplot(fig, clear_figure=True)
         else:
