@@ -18,6 +18,7 @@ import urllib.request
 from datetime import date, datetime
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import streamlit as st
 from matplotlib.backends.backend_pdf import PdfPages
@@ -148,85 +149,110 @@ def load_workbook_pellets(xlsx_path: str, boundary_hour: int):
     return result
 
 
+def _dark_intervals(light_start: float, dark_start: float):
+    """Return the dark phase as (start, end) hour intervals within [0, 24)."""
+    if light_start < dark_start:
+        return [(0.0, light_start), (dark_start, 24.0)]
+    # Light phase wraps past midnight (e.g., reversed light cycle).
+    return [(dark_start, light_start)]
+
+
 def make_actogram(
     pellets: pd.DataFrame,
     tab_name: str,
     selected_days,
-    bin_minutes: int = 10,
+    bin_minutes: int = 5,
     light_start: float = 7.0,
     dark_start: float = 19.0,
 ):
-    """Render an actogram figure for one mouse over the selected feeding days."""
-    pellets = pellets[pellets["FeedingDay"].isin(selected_days)].copy()
+    """Render a ClockLab-style 48 h double-plotted actogram for one mouse.
+
+    Each row is one calendar day (midnight to midnight) on the left and the
+    following day on the right, so row i shows days i and i+1. Bars are pellet
+    counts per `bin_minutes` bin; dark phase is shaded gray.
+    """
+    pellets = pellets[pellets["FeedingDay"].isin(selected_days)]
     if pellets.empty:
         return None
-    pellets["Event_Count"] = 1
-    binned = (
-        pellets.set_index(TIME_COL)["Event_Count"]
-        .resample(f"{bin_minutes}min")
-        .sum()
-        .reset_index()
-    )
-    binned["Date"] = binned[TIME_COL].dt.date
-    binned["Time_of_Day"] = binned[TIME_COL].dt.hour + binned[TIME_COL].dt.minute / 60.0
 
-    unique_dates = sorted(binned["Date"].unique())
-    n = len(unique_dates)
-    if n == 0:
-        return None
-    max_events = binned["Event_Count"].max()
-    y_max = (max_events * 1.1) if pd.notna(max_events) and max_events > 0 else 5
+    ts = pellets[TIME_COL]
+    first_day = ts.min().normalize()
+    last_day = ts.max().normalize()
+    n_days = int((last_day - first_day).days) + 1
+    bins_per_day = int(round(24 * 60 / bin_minutes))
 
-    fig, axes = plt.subplots(nrows=n, ncols=1, figsize=(10, 1.3 * n), sharex=True, sharey=True)
-    if n == 1:
-        axes = [axes]
-    fig.suptitle(f"FED3 Actogram — {tab_name}", fontsize=13, fontweight="bold", color=PINK_PRIMARY, y=1.02)
+    # Bin every event onto a fixed calendar grid so empty bins/days stay empty.
+    offset_min = (ts - first_day).dt.total_seconds() / 60.0
+    idx = (offset_min // bin_minutes).astype(int).to_numpy()
+    counts = np.bincount(idx, minlength=n_days * bins_per_day)[: n_days * bins_per_day]
+    daily = counts.reshape(n_days, bins_per_day)
+
+    y_max = daily.max() if daily.max() > 0 else 1
+    x_left = np.arange(bins_per_day) * (bin_minutes / 60.0)
     bar_w = bin_minutes / 60.0
+    dark = _dark_intervals(light_start, dark_start)
 
-    for i, (ax, d) in enumerate(zip(axes, unique_dates)):
-        day_data = binned[binned["Date"] == d]
-        if light_start < dark_start:
-            ax.axvspan(0, light_start, color="lightgray", alpha=0.35, lw=0)
-            ax.axvspan(light_start, dark_start, color="lemonchiffon", alpha=0.45, lw=0)
-            ax.axvspan(dark_start, 24, color="lightgray", alpha=0.35, lw=0)
-        else:
-            # Light phase wraps past midnight (e.g., reversed light cycle).
-            ax.axvspan(0, dark_start, color="lemonchiffon", alpha=0.45, lw=0)
-            ax.axvspan(dark_start, light_start, color="lightgray", alpha=0.35, lw=0)
-            ax.axvspan(light_start, 24, color="lemonchiffon", alpha=0.45, lw=0)
-        ax.bar(
-            day_data["Time_of_Day"],
-            day_data["Event_Count"],
-            width=bar_w,
-            color=PINK_DEEP,
-            align="edge",
-            edgecolor="none",
-        )
-        ax.set_xlim(0, 24)
+    row_h = 0.42
+    fig, axes = plt.subplots(
+        nrows=n_days + 1,
+        ncols=1,
+        figsize=(13, 0.5 + row_h * (n_days + 1)),
+        sharex=True,
+        gridspec_kw={"height_ratios": [0.35] + [1] * n_days},
+        dpi=200,
+    )
+    axes = np.atleast_1d(axes)
+    fig.patch.set_facecolor("white")
+    fig.suptitle(
+        f"{tab_name}  ·  pellets per {bin_minutes} min",
+        fontsize=12, fontweight="bold", color="black", y=1.0,
+    )
+
+    # Light/dark bar across the top, as in ClockLab.
+    lb = axes[0]
+    lb.set_facecolor("white")
+    for half in (0, 24):
+        for a, b in dark:
+            lb.axvspan(half + a, half + b, color="black", lw=0)
+    lb.set_yticks([])
+    for s in lb.spines.values():
+        s.set_color("black")
+        s.set_linewidth(0.8)
+
+    for i in range(n_days):
+        ax = axes[i + 1]
+        ax.set_facecolor("white")
+        for half in (0, 24):
+            for a, b in dark:
+                ax.axvspan(half + a, half + b, color="0.85", lw=0, zorder=0)
+        right = daily[i + 1] if i + 1 < n_days else np.zeros(bins_per_day)
+        for half, row in ((0, daily[i]), (24, right)):
+            nz = row > 0
+            ax.bar(x_left[nz] + half, row[nz], width=bar_w, align="edge",
+                   color="black", edgecolor="none", zorder=2)
+        ax.axvline(24, color="black", lw=0.6, zorder=3)
         ax.set_ylim(0, y_max)
-        ax.locator_params(axis="y", nbins=3)
-        ax.tick_params(axis="y", labelsize=8, colors=PINK_DEEP)
-        ax.set_ylabel(
-            d.strftime("%Y-%m-%d"),
-            rotation=0,
-            labelpad=45,
-            ha="right",
-            va="center",
-            fontsize=9,
-            color=PINK_DEEP,
-        )
-        for s in ("top", "right"):
+        ax.set_yticks([])
+        d = (first_day + pd.Timedelta(days=i)).date()
+        ax.set_ylabel(d.strftime("%m-%d"), rotation=0, labelpad=22, ha="right",
+                      va="center", fontsize=8, color="black")
+        for s in ("top", "right", "left"):
             ax.spines[s].set_visible(False)
-        for s in ("left", "bottom"):
-            ax.spines[s].set_color(PINK_PRIMARY)
-            ax.spines[s].set_linewidth(1.0)
-        if ax is not axes[-1]:
-            ax.tick_params(bottom=False)
+        ax.spines["bottom"].set_color("black")
+        ax.spines["bottom"].set_linewidth(0.6)
+        ax.tick_params(axis="x", length=0)
 
-    axes[-1].set_xlabel("Time of Day (h)", fontsize=11, labelpad=10, color=PINK_DEEP)
-    axes[-1].set_xticks(range(0, 25, 2))
-    axes[-1].tick_params(axis="x", colors=PINK_DEEP)
-    plt.subplots_adjust(hspace=0.0)
+    axes[-1].set_xlim(0, 48)
+    ticks = list(range(0, 49, 3))
+    axes[-1].set_xticks(ticks)
+    axes[-1].set_xticklabels([str(t % 24) if t not in (0, 48) else "0" for t in ticks], fontsize=8)
+    axes[-1].set_xticks(np.arange(0, 48.01, 1), minor=True)
+    axes[-1].tick_params(axis="x", which="major", length=4, colors="black")
+    axes[-1].tick_params(axis="x", which="minor", length=2, colors="black")
+    axes[-1].set_xlabel("Time of day (h), double-plotted", fontsize=9, color="black")
+    fig.text(0.995, 0.005, f"y max = {int(y_max)} pellets/bin", ha="right", va="bottom",
+             fontsize=7, color="0.4")
+    plt.subplots_adjust(hspace=0.0, left=0.07, right=0.99, top=0.95)
     return fig
 
 
@@ -295,7 +321,7 @@ threshold = st.sidebar.slider(
     "Warning threshold (today ÷ yesterday)", min_value=0.5, max_value=1.0, value=0.80, step=0.05
 )
 bin_minutes = st.sidebar.number_input(
-    "Actogram bin size (min)", min_value=1, max_value=60, value=10
+    "Actogram bin size (min)", min_value=1, max_value=60, value=5
 )
 light_start = st.sidebar.number_input(
     "Lights ON hour (0–23.5)",
