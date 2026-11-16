@@ -3,6 +3,22 @@
 Tools for logging and visualising FED3 (Feeding Experimentation Device 3) data
 for the Kriegsfeld lab.
 
+## Keeping every computer up to date
+
+**If you add or change any file in this folder, commit and push it right away**
+so the other computers get it. Files that are never pushed exist only on the
+computer that made them. Run these from inside the `FED3_Kriegsfeld` folder:
+
+```
+git pull
+git add .
+git commit -m "Short description of what you added"
+git push
+```
+
+Before you start working on any computer, run `git pull` first to get
+everyone else's latest files.
+
 ## Contents
 
 ```
@@ -48,7 +64,7 @@ sheet**. The sheet must be shared as "Anyone with the link — Viewer".
   if your restricted-feeding schedule shifts.
 - **Pellet weight (mg)** — default 20; used to convert counts to grams.
 - **Warning threshold** — default 0.80 (warns if today ÷ yesterday < 80%).
-- **Actogram bin size** — default 10 minutes.
+- **Actogram bin size** — default 5 minutes.
 - **Lights ON / Lights OFF hour** — default 7 (7am) and 19 (7pm), in
   half-hour steps. Sets the light/dark shading on the actograms and PDF.
   A reversed cycle (e.g., ON 19, OFF 7) is supported.
