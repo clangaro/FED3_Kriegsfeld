@@ -26,3 +26,12 @@ data/outputs/*.pdf
 .idea/
 .vscode/
 *.swp
+
+# macOS resource-fork files (appear when the folder is copied via USB/exFAT)
+._*
+
+# R session history
+.Rhistory
+
+# Google Cloud service-account keys -- never commit
+trf-kriegsfeld-*.json
