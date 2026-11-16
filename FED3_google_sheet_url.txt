@@ -1,7 +1,0 @@
-FED3 google sheet URL for RTFED program
-
-1p5B2r8i9jiza19YGHup5oXVZIpM5BFaedN9zGxVCzOQ
-
-URL for Streamlit program
-
-https://docs.google.com/spreadsheets/d/1p5B2r8i9jiza19YGHup5oXVZIpM5BFaedN9zGxVCzOQ/edit?gid=277395139#gid=277395139

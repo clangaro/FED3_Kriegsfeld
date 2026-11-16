@@ -35,3 +35,7 @@ data/outputs/*.pdf
 
 # Google Cloud service-account keys -- never commit
 trf-kriegsfeld-*.json
+
+# All experiment data stays local (repo is public); sync it via Box/USB
+data/
+FED3_google_sheet_url.txt
